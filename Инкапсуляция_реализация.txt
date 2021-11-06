@@ -12,7 +12,7 @@
 const int ARRAY_MAX_SIZE = 100;
 
 /* private-Поля */
-int m_array[ARRAY_MAX_SIZE];
+char m_array[ARRAY_MAX_SIZE];
 int m_length;
 int m_cursor;
 /*
@@ -105,7 +105,7 @@ const int INITIAL_CAPACITY = 100;
 
 /* private-Поля */
 int m_capacity;
-int *m_array;
+char *m_array;
 int m_length;
 int m_cursor;
 /*
@@ -207,7 +207,9 @@ void EditorBuffer::expandCapacity() {
 }
 
 //----------------------------- С Т Е К И -----------------------------------------
-
+Примечания: CharStack - это простой класс стека, который хранит элементы в массиве 
+фиксированной длины, и должен включать в себя как минимум 2 поля: задающее
+массив и счетчик числа элементов. (то есть  минимум 5 байт)
 /*
  * Файл: stackbuf.cpp
  * ------------------
