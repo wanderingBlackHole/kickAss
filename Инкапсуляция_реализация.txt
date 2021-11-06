@@ -1,0 +1,435 @@
+//---------- М А С С И В  Ф И К С И Р О В А Н Н О Й  Д Л И Н Ы -----------------
+/*
+ * Файл: statarraybuf.cpp
+ * ------------------
+ * Этот файл реализует класс EditorBuffer, используя
+ * массив фиксированной длины для представления буфера.
+ */
+#include "genlib.h"
+#include "buffer.h"
+#include <iostream>
+/* Константы */
+const int ARRAY_MAX_SIZE = 100;
+
+/* private-Поля */
+int m_array[ARRAY_MAX_SIZE];
+int m_length;
+int m_cursor;
+/*
+ * Примечания по реализации: EditorBuffer
+ * ----------------------------------
+ * В этом представлении буфера, символы хранятся в  
+ * массиве фиксированной длины, размер которого задается
+ * полем m_length. Позиция курсора указывает на индекс символа,
+ * следующего за тем, где на экране появится курсор.
+ */
+
+EditorBuffer::EditorBuffer() : m_array {}, m_length(ARRAY_MAX_SIZE), m_cursor(0)
+{
+}
+/*
+ * Примечания по реализации: ~EditorBuffer
+ * -----------------------------------
+ * Деструктор должен освободить любую выделенную память, чтобы
+ * исключить утечки памяти. В случае массива фиксированной длины
+ * мы не имеем динамически выделяемой памяти, поэтому используется
+ * деструктор по умолчанию.
+ */
+EditorBuffer::~EditorBuffer() {
+}
+/*
+ * Примечания по реализации: moveCursor методы
+ * ----------------------------------------
+ * 4 метода moveCursor регулируют значение переменной
+ * экземпляра m_cursor.
+ */
+void EditorBuffer::moveCursorForward() {
+ if (m_cursor < m_length) m_cursor++;
+}
+void EditorBuffer::moveCursorBackward() {
+ if (m_cursor > 0) m_cursor--;
+}
+void EditorBuffer::moveCursorToStart() {
+ m_cursor = 0;
+}
+void EditorBuffer::moveCursorToEnd() {
+ m_cursor = m_length;
+}
+/*
+ * Примечания по реализации: insertCharacter и deleteCharacter
+ * ---------------------------------------------------------
+ * Каждая из функций, которая добавляет или удаляет символ,
+ * должна сдвигать все последующие символы в массиве, либо
+ * чтобы появилось место для новой вставки, либо чтобы 
+ * удалить пустое пространство, оставшееся после удаления.
+ */
+void EditorBuffer::insertCharacter(char ch) {
+ for (int i = m_length; i > m_cursor; i--) {
+ m_array[i] = m_array[i - 1];
+ }
+ m_array[m_cursor] = ch;
+ m_cursor++;
+}
+void EditorBuffer::deleteCharacter() {
+ if (m_cursor < m_length) {
+ for (int i = m_cursor+1; i < m_length; i++) {
+ m_array[i - 1] = m_array[i];
+ }
+ m_length--;
+ }
+}
+
+void EditorBuffer::display() {
+ for (int i = 0; i < m_length; i++) {
+ cout << ' ' << m_array[i];
+ }
+ cout << endl;
+ for (int i = 0; i < m_cursor; i++) {
+ cout << " ";
+ }
+ cout << '^' << endl;
+}
+//-------- Д И Н А М И Ч Е С К И  Р А З М Е Щ А Е М Ы Й  М А С С И В -----------
+
+/*
+ * Файл: dynarraybuf.cpp
+ * ------------------
+ * Этот файл реализует класс EditorBuffer, используя
+ * динамический массив для представления буфера.
+ */
+#include "genlib.h"
+#include "buffer.h"
+#include <iostream>
+/* Константы */
+const int INITIAL_CAPACITY = 100;
+
+/* private-Поля */
+int m_capacity;
+int *m_array;
+int m_length;
+int m_cursor;
+/*
+ * Примечания по реализации: EditorBuffer
+ * ----------------------------------
+ * В этом представлении буфера, символы хранятся в динамическом 
+ * массиве вместе с целыми числами, хранящими емкость буфера
+ * (его выделенный размер), длину буфера (его действительный размер), 
+ * и позицию курсора. Позиция курсора указывает на индекс символа,
+ * следующего за тем, где на экране появится курсор. Конструктор 
+ * просто инициализирует эту структуру.
+ */
+EditorBuffer::EditorBuffer() {
+ m_capacity = INITIAL_CAPACITY;
+ m_array = new char[capacity];
+ m_length = 0;
+ m_cursor = 0;
+}
+/*
+ * Примечания по реализации: ~EditorBuffer
+ * -----------------------------------
+ * Деструктор должен освободить любую выделенную память, чтобы
+ * исключить утечки памяти. Единственной динамически выделяемой памятью
+ * является динамический массив, в котором хранится текст.
+ */
+EditorBuffer::~EditorBuffer() {
+ delete[] m_array;
+}
+/*
+ * Примечания по реализации: moveCursor методы
+ * ----------------------------------------
+ * 4 метода moveCursor регулируют значение переменной
+ * экземпляра m_cursor.
+ */
+void EditorBuffer::moveCursorForward() {
+ if (m_cursor < m_length) m_cursor++;
+}
+void EditorBuffer::moveCursorBackward() {
+ if (m_cursor > 0) m_cursor--;
+}
+void EditorBuffer::moveCursorToStart() {
+ m_cursor = 0;
+}
+void EditorBuffer::moveCursorToEnd() {
+ m_cursor = m_length;
+}
+/*
+ * Примечания по реализации: insertCharacter и deleteCharacter
+ * ---------------------------------------------------------
+ * Каждая из функций, которая добавляет или удаляет символ,
+ * должна сдвигать все последующие символы в массиве, либо
+ * чтобы появилось место для новой вставки, либо чтобы 
+ * удалить пустое пространство, оставшееся после удаления.
+ */
+void EditorBuffer::insertCharacter(char ch) {
+ if (m_length == m_capacity) expandCapacity();
+ for (int i = m_length; i > m_cursor; i--) {
+ m_array[i] = m_array[i - 1];
+ }
+ m_array[m_cursor] = ch;
+ m_length++;
+ m_cursor++;
+}
+void EditorBuffer::deleteCharacter() {
+ if (m_cursor < m_length) {
+ for (int i = m_cursor+1; i < m_length; i++) {
+ m_array[i - 1] = m_array[i];
+ }
+ m_length--;
+ }
+}
+
+void EditorBuffer::display() {
+ for (int i = 0; i < m_length; i++) {
+ cout << ' ' << m_array[i];
+ }
+ cout << endl;
+ for (int i = 0; i < m_cursor; i++) {
+ cout << " ";
+ }
+ cout << '^' << endl;
+}
+/*
+ * Примечания по реализации: expandCapacity
+ * ------------------------------------
+ * Этот private метод удваивает размер массива всякий раз, когда
+ * в нем не хватает места. Для этого он должен выделить новый массив,
+ * скопировать в него все символы из старого, и затем освободить
+ * старое хранилище.
+ */
+void EditorBuffer::expandCapacity() {
+ char *oldArray = m_array;
+ m_capacity *= 2;
+ m_array = new char[m_capacity];
+ for (int i = 0; i < m_length; i++) {
+ m_array[i] = oldArray[i];
+ }
+ delete[] oldArray;
+}
+
+//----------------------------- С Т Е К И -----------------------------------------
+
+/*
+ * Файл: stackbuf.cpp
+ * ------------------
+ * Этот файл реализует класс EditorBuffer используя два
+ * стека, представляющих буфер. Символы до курсора
+ * хранятся в before стеке, а символы после курсора
+ * хранятся в after стеке. Курсор явно не представлен, а 
+ * является просто границей между двумя стеками.
+ */
+#include "genlib.h"
+#include "buffer.h"
+#include <iostream>
+
+/* private-Поля */
+CharStack m_before;
+CharStack m_after;
+/*
+ * Примечания по реализации: EditorBuffer
+ * ----------------------------------
+ * В этой реализации, необходимо, чтобы два стека были инициализированы
+ * пустыми. Это происходит автоматически, при объявлении переменных
+ * CharStack.
+ */
+EditorBuffer::EditorBuffer() 
+{
+}
+/*
+ * Примечания по реализации: ~EditorBuffer
+ * -----------------------------------
+ * Деструктор должен освобождать любую динамически выделяемую память.
+ * В этой реализации все распределение происходит в классе
+ * CharStack и будут управляться его деструктором.
+ */
+EditorBuffer::~EditorBuffer() 
+{
+}
+/*
+ * Примечания по реализации: методы moveCursor
+ * ----------------------------------------
+ * 4 метода moveCursor используются push и pop для передачи
+ * значений между двумя стеками.
+ */
+void EditorBuffer::moveCursorForward() {
+ if (!m_after.isEmpty()) {
+ m_before.push(m_after.pop());
+ }
+}
+void EditorBuffer::moveCursorBackward() {
+ if (!m_before.isEmpty()) {
+ m_after.push(m_before.pop());
+ }
+}
+
+void EditorBuffer::moveCursorToStart() {
+ while (!m_before.isEmpty()) {
+ m_after.push(m_before.pop());
+ }
+}
+void EditorBuffer::moveCursorToEnd() {
+ while (!m_after.isEmpty()) {
+ m_before.push(m_after.pop());
+ }
+}
+/*
+ * Примечания по реализации: insertCharacter и deleteCharacter
+ * ---------------------------------------------------------
+ * Каждая функция, добавляющая или удаляющая символы, может 
+ * делать это с помощью одной push или pop операции.
+ */
+void EditorBuffer::insertCharacter(char ch) {
+ m_before.push(ch);
+}
+void EditorBuffer::deleteCharacter() {
+ if (!m_after.isEmpty()) {
+ m_after.pop();
+ }
+}
+void EditorBuffer::display() {
+ int nBefore = m_before.size();
+ moveCursorToStart();
+ while (!m_after.isEmpty()) {
+ cout << ' ' << m_after.peek();
+ moveCursorForward();
+ }
+ cout << endl;
+ moveCursorToStart();
+ for (int i = 0; i < nBefore; i++) {
+ cout << " ";
+ moveCursorForward();
+ }
+ cout << '^' << endl;
+}
+
+//------------ О Д Н О С В Я З Н Ы Й  С П И С О К ---------------------------------
+/*
+ * Файл: listbuf.cpp
+ * -----------------
+ * Этот файл реализует класс EditorBuffer используя односвязный
+ * список для представления буфера.
+ */
+#include "genlib.h"
+#include "buffer.h"
+#include <iostream>
+
+/* private-Поля */
+struct cellT {
+ char ch;
+ cellT *link;
+};
+cellT *m_start;
+cellT *m_cursor;
+
+/*
+ * Примечания по реализации: EditorBuffer
+ * ----------------------------------------------
+ * Эта функция инициализирует пустой буфер, представленный 
+ * односвязным списком. Для упрощения операций, эта 
+ * реализация использует дополнительную "фиктивную" ячейку
+ * в начале каждого списка. Тогда пустой буфер:
+ *
+ * +-------+        +------+
+ * |   o---+---====>|      |
+ * +-------+  /     +------+
+ * |   o---+-/      | NULL |
+ * +-------+        +------+
+ */
+EditorBuffer::EditorBuffer() {
+ start = cursor = new cellT;
+ start->link = NULL;
+}
+/*
+ * Примечания по реализации: EditorBuffer destructor
+ * ---------------------------------------------
+ * Деструктор удаляет каждую ячейку буфера. Во избежание выбора
+ * полей, содержащих указатели, структуры после их освобождения,
+ * необходимо скопировать адрес указателя до вызова delete.
+ */
+EditorBuffer::~EditorBuffer() {
+ cellT *cp = m_start;
+ while (cp != NULL) {
+ cellT *next = cp->link;
+ delete cp;
+ cp = next;
+ }
+}
+
+/*
+ * Примечания по реализации: перемещения курсора
+ * -------------------------------------
+ * Четыре функции перемещения курсора имеют разную временную 
+ * сложность, потому что структура односвязного списка 
+ * ассиметрична по отношению движения вперед/назад.
+ */
+void EditorBuffer::moveCursorForward() {
+ if (m_cursor->link != NULL) {
+ m_cursor = m_cursor->link;
+ }
+}
+void EditorBuffer::moveCursorBackward() {
+ cellT *cp = start;
+ if (m_cursor != start) {
+ while (cp->link != m_cursor) {
+ cp = cp->link;
+ }
+ m_cursor = cp;
+ }
+}
+void EditorBuffer::moveCursorToStart() {
+ m_cursor = m_start;
+}
+void EditorBuffer::moveCursorToEnd() {
+ while (m_cursor->link != NULL) {
+ moveCursorForward();
+ }
+}
+/*
+ * Примечания по реализации: insertCharacter и deleteCharacter
+ * -------------------------------------
+ * Стали достижимы за постоянное время
+ */
+void EditorBuffer::insertCharacter(char ch) {
+ cellT *cp = new cellT;
+ cp->ch = ch;
+ cp->link = m_cursor->link;
+ m_cursor->link = cp;
+ m_cursor = cp;
+}
+
+void EditorBuffer::deleteCharacter() {
+ if (m_cursor->link != NULL) {
+ cellT *oldcell = m_cursor->link;
+ m_cursor->link = oldcell->link;
+ delete oldcell;
+ }
+}
+
+void EditorBuffer::display() {
+ for (cellT *cp = m_start->link; cp != NULL; cp = cp->link) {
+ cout << ' ' << cp->ch;
+ }
+ cout << endl;
+ for (cellT *cp = m_start; cp != m_cursor; cp = cp->link) {
+ cout << " ";
+ }
+ cout << '^' << endl;
+}
+
+
+//-------------- Д В У С В Я З Н Ы Й  С П И С О К ---------------------------------
+Теперь каждая ячейка будет содержать два поля ссылок: prev и next. поле
+prev фиктивной ячейки указывает на конец буфера, а поле последней 
+ячейки - на фиктивную ячейку.
+/* private-Поля */
+struct cellT {
+ char ch;
+ cellT *prev;
+ cellT *next;
+};
+cellT *m_start;
+cellT *m_cursor;
+
+В принципе реализация похожа на односвязный, за исключением того что
+методы moveCursorBackward и moveCursorToEnd теперь также имеют сложность O(1).
+
+Про недостатки данного метода а также других - в отдельном файле "Инкапсуляция_оценки"
